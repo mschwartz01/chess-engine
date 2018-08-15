@@ -301,7 +301,6 @@ struct position parse_fen(char *fen) {
 }
 
 int is_attacked(unsigned long long square_board, struct board *board, int turn) {
-	int direction;
 	unsigned long long opponent_pawn_board, opponent_knight_board, opponent_bishop_board, opponent_rook_board, opponent_queen_board, opponent_king_board,
 					   player_left_file, player_right_file;
 	if (turn == WHITE) {
@@ -313,7 +312,6 @@ int is_attacked(unsigned long long square_board, struct board *board, int turn) 
 		opponent_king_board = board->k;
 		player_left_file = FILE_A;
 		player_right_file = FILE_H;
-		direction = 1;
 	} else {
 		opponent_pawn_board = board->P;
 		opponent_knight_board = board->N;
@@ -323,12 +321,11 @@ int is_attacked(unsigned long long square_board, struct board *board, int turn) 
 		opponent_king_board = board->K;
 		player_left_file = FILE_H;
 		player_right_file = FILE_A;
-		direction = -1;
 	}
-	if (square_board & (opponent_pawn_board >> direction * 7) & ~player_right_file) {
+	if (square_board & (turn == WHITE ? opponent_pawn_board >> 7 : opponent_pawn_board << 7) & ~player_right_file) {
 		return 1;
 	}
-	if (square_board & (opponent_pawn_board >> direction * 9) & ~player_left_file) {
+	if (square_board & (turn == WHITE ? opponent_pawn_board >> 9 : opponent_pawn_board << 9) & ~player_left_file) {
 		return 1;
 	}
 	if ((((square_board << 17) & ~FILE_H) |
@@ -493,8 +490,8 @@ void make_move(struct position *pos, struct move *move) {
 		pos->en_passant = -1;
 	}
 	if ((from_board & *player_pawn_board) && (move->to == info.en_passant)) {
-		*opponent_pawn_board &= ~(to_board >> direction * 8);
-		*opponent_board &= ~(to_board >> direction * 8);
+		*opponent_pawn_board &= ~(player == WHITE ? to_board >> 8 : to_board << 8);
+		*opponent_board &= ~(player == WHITE ? to_board >> 8 : to_board << 8);
 		info.captured_piece = PAWN_EN_PASSANT;
 	}
 	if (from_board & *player_pawn_board) {
@@ -608,7 +605,7 @@ void take_back_move(struct position *pos) {
 	unsigned long long *player_board, *player_pawn_board, *player_knight_board, *player_bishop_board, *player_rook_board, *player_queen_board, *player_king_board,
 					   *opponent_board, *opponent_pawn_board, *opponent_knight_board, *opponent_bishop_board, *opponent_rook_board, *opponent_queen_board, *opponent_king_board,
 					   A_playerside, D_playerside, F_playerside, H_playerside;
-	int player, king_start_location, direction;
+	int player, king_start_location;
 	if (info.move_color == WHITE) {
 		player = WHITE;
 		player_board = &board->white;
@@ -630,7 +627,6 @@ void take_back_move(struct position *pos) {
 		D_playerside = D1;
 		F_playerside = F1;
 		H_playerside = H1;
-		direction = 1;
 	} else {
 		player = BLACK;
 		player_board = &board->black;
@@ -652,7 +648,6 @@ void take_back_move(struct position *pos) {
 		D_playerside = D8;
 		F_playerside = F8;
 		H_playerside = H8;
-		direction = -1;
 	}
 	switch (info.moved_piece) {
 		case PAWN:
@@ -740,8 +735,8 @@ void take_back_move(struct position *pos) {
 				*opponent_board |= to_board;
 				break;
 			case PAWN_EN_PASSANT:
-				*opponent_pawn_board |= to_board >> direction * 8;
-				*opponent_board |= to_board >> direction * 8;
+				*opponent_pawn_board |= (player == WHITE ? to_board >> 8 : to_board << 8);
+				*opponent_board |= (player == WHITE ? to_board >> 8 : to_board << 8);
 				break;
 		}
 	}
@@ -803,29 +798,29 @@ void get_moves(struct position *pos) {
 		direction = -1;
 	}
 	// pawn forward one step, no promotion
-	moves_board = (player_pawn_board << direction * 8) & ~(player_board | opponent_board) & ~promotion_rank;
+	moves_board = (player == WHITE ? player_pawn_board << 8 : player_pawn_board >> 8) & ~(player_board | opponent_board) & ~promotion_rank;
 	for (location = 0; moves_board; moves_board >>= 1, location++) {
 		if (moves_board & 1) {
 			moves[num_moves++] = (struct move) {63 - location + direction * 8, 63 - location, 0};
 		}
 	}
 	// pawn forward two steps
-	moves_board = (player_pawn_board << direction * 8) & ~(player_board | opponent_board) & ~promotion_rank;
-	moves_board = (moves_board << direction * 8) & ~(player_board | opponent_board) & player_pawn_forward_2_rank;
+	moves_board = (player == WHITE ? player_pawn_board << 8 : player_pawn_board >> 8) & ~(player_board | opponent_board) & ~promotion_rank;
+	moves_board = (player == WHITE ? moves_board << 8 : moves_board >> 8) & ~(player_board | opponent_board) & player_pawn_forward_2_rank;
 	for (location = 0; moves_board; moves_board >>= 1, location++) {
 		if (moves_board & 1) {
 			moves[num_moves++] = (struct  move) {63 - location + direction * 16, 63 - location, 0};
 		}
 	}
 	// pawn capture left, no promotion
-	moves_board = (player_pawn_board << direction * 9) & opponent_board & ~player_right_file & ~promotion_rank;
+	moves_board = (player == WHITE ? player_pawn_board << 9 : player_pawn_board >> 9) & opponent_board & ~player_right_file & ~promotion_rank;
 	for (location = 0; moves_board; moves_board >>= 1, location++) {
 		if (moves_board & 1) {
 			moves[num_moves++] = (struct move) {63 - location + direction * 9, 63 - location, 0};
 		}
 	}
 	// pawn capture right, no promotion
-	moves_board = (player_pawn_board << direction * 7) & opponent_board & ~player_left_file & ~promotion_rank;
+	moves_board = (player == WHITE ? player_pawn_board << 7 : player_pawn_board >> 7) & opponent_board & ~player_left_file & ~promotion_rank;
 	for (location = 0; moves_board; moves_board >>= 1, location++) {
 		if (moves_board & 1) {
 			moves[num_moves++] = (struct move) {63 - location + direction * 7, 63 - location, 0};
@@ -840,7 +835,7 @@ void get_moves(struct position *pos) {
 		}
 	}
 	// pawn promotion
-	moves_board = (player_pawn_board << direction * 8) & ~(player_board | opponent_board) & promotion_rank;
+	moves_board = (player == WHITE ? player_pawn_board << 8 : player_pawn_board >> 8) & ~(player_board | opponent_board) & promotion_rank;
 	for (location = 0; moves_board; moves_board >>= 1, location++) {
 		if (moves_board & 1) {
 			moves[num_moves++] = (struct move) {63 - location + direction * 8, 63 - location, KNIGHT};
@@ -849,7 +844,7 @@ void get_moves(struct position *pos) {
 			moves[num_moves++] = (struct move) {63 - location + direction * 8, 63 - location, QUEEN};
 		}
 	}
-	moves_board = (player_pawn_board << direction * 9) & opponent_board & ~player_right_file & promotion_rank;
+	moves_board = (player == WHITE ? player_pawn_board << 9 : player_pawn_board >> 9) & opponent_board & ~player_right_file & promotion_rank;
 	for (location = 0; moves_board; moves_board >>= 1, location++) {
 		if (moves_board & 1) {
 			moves[num_moves++] = (struct move) {63 - location + direction * 9, 63 - location, KNIGHT};
@@ -858,7 +853,7 @@ void get_moves(struct position *pos) {
 			moves[num_moves++] = (struct move) {63 - location + direction * 9, 63 - location, QUEEN};
 		}
 	}
-	moves_board = (player_pawn_board << direction * 7) & opponent_board & ~player_left_file & promotion_rank;
+	moves_board = (player == WHITE ? player_pawn_board << 7 : player_pawn_board >> 7) & opponent_board & ~player_left_file & promotion_rank;
 	for (location = 0; moves_board; moves_board >>= 1, location++) {
 		if (moves_board & 1) {
 			moves[num_moves++] = (struct move) {63 - location + direction * 7, 63 - location, KNIGHT};
@@ -1138,7 +1133,7 @@ void get_moves(struct position *pos) {
 	num_moves = 0;
 	for (int i = 0; i < j; i++) {
 		make_move(pos, &moves[i]);
-		if (!is_attacked(player_king_board, board, player)) {
+		if (!is_attacked(player == WHITE ? pos->board.K : pos->board.k, board, player)) {
 			moves[num_moves++] = moves[i];
 		}
 		take_back_move(pos);
