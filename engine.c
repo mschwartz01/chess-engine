@@ -28,7 +28,7 @@ const unsigned long long G8 = 0x0200000000000000;
 const unsigned long long H8 = 0x0100000000000000;
 
 const unsigned long long BIT = 1;
-const int MAX_POSSIBLE_MOVES = 100;
+const int MAX_POSSIBLE_MOVES = 250;
 const int MAX_MADE_MOVES = 200;
 
 enum turn {WHITE, BLACK};
@@ -64,18 +64,17 @@ struct move_info {
 struct move_info made_moves[MAX_MADE_MOVES];
 int num_made_moves;
 
-struct move moves[MAX_POSSIBLE_MOVES];
-int num_moves;
-
 void print_board(struct position *);
 
-void get_moves(struct position *);
+void get_moves(struct position *pos, struct move moves[], int *num_moves);
 
 struct position parse_fen(char *fen);
 
 void make_move(struct position *pos, struct move *move);
 
 void take_back_move(struct position *pos);
+
+void perft(int depth, struct position *pos, int *move_count);
 
 int main() {
 	struct position starting_pos = {
@@ -96,15 +95,20 @@ int main() {
 	// 40 41 42 43 44 45 46 47
 	// 48 49 50 51 52 53 54 55
 	// 56 57 58 59 60 61 62 63
-	num_made_moves = 0;
+	// num_made_moves = 0;
 	struct position p = parse_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-	get_moves(&p);
-	for (int i = 0; i < num_moves; i++) {
-		make_move(&p, &moves[i]);
-		print_board(&p);
-		take_back_move(&p);
-		print_board(&p);
-	}
+	// struct move moves[MAX_POSSIBLE_MOVES];
+	// int num_moves;
+	// get_moves(&p, moves, &num_moves);
+	// for (int i = 0; i < num_moves; i++) {
+	// 	make_move(&p, &moves[i]);
+	// 	print_board(&p);
+	// 	take_back_move(&p);
+	// 	print_board(&p);
+	// }
+	int perft_move_count = 0;
+	perft(2, &p, &perft_move_count);
+	printf("%d\n", perft_move_count);
 	return 0;
 }
 
@@ -743,11 +747,11 @@ void take_back_move(struct position *pos) {
 	pos->turn = player;
 }
 
-void get_moves(struct position *pos) {
+void get_moves(struct position *pos, struct move moves[], int *num_moves) {
 	struct board *board = &(pos->board);
 	unsigned long long moves_board;
 	int location;
-	num_moves = 0;
+	*num_moves = 0;
 	int player, king_start_location, kingside_castle_location, queenside_castle_location, direction;
 	unsigned long long player_board, player_pawn_board, player_knight_board, player_bishop_board, player_rook_board, player_queen_board, player_king_board,
 					   opponent_board, B_playerside, C_playerside, D_playerside, E_playerside, F_playerside, G_playerside,
@@ -801,7 +805,7 @@ void get_moves(struct position *pos) {
 	moves_board = (player == WHITE ? player_pawn_board << 8 : player_pawn_board >> 8) & ~(player_board | opponent_board) & ~promotion_rank;
 	for (location = 0; moves_board; moves_board >>= 1, location++) {
 		if (moves_board & 1) {
-			moves[num_moves++] = (struct move) {63 - location + direction * 8, 63 - location, 0};
+			moves[(*num_moves)++] = (struct move) {63 - location + direction * 8, 63 - location, 0};
 		}
 	}
 	// pawn forward two steps
@@ -809,57 +813,57 @@ void get_moves(struct position *pos) {
 	moves_board = (player == WHITE ? moves_board << 8 : moves_board >> 8) & ~(player_board | opponent_board) & player_pawn_forward_2_rank;
 	for (location = 0; moves_board; moves_board >>= 1, location++) {
 		if (moves_board & 1) {
-			moves[num_moves++] = (struct  move) {63 - location + direction * 16, 63 - location, 0};
+			moves[(*num_moves)++] = (struct  move) {63 - location + direction * 16, 63 - location, 0};
 		}
 	}
 	// pawn capture left, no promotion
 	moves_board = (player == WHITE ? player_pawn_board << 9 : player_pawn_board >> 9) & opponent_board & ~player_right_file & ~promotion_rank;
 	for (location = 0; moves_board; moves_board >>= 1, location++) {
 		if (moves_board & 1) {
-			moves[num_moves++] = (struct move) {63 - location + direction * 9, 63 - location, 0};
+			moves[(*num_moves)++] = (struct move) {63 - location + direction * 9, 63 - location, 0};
 		}
 	}
 	// pawn capture right, no promotion
 	moves_board = (player == WHITE ? player_pawn_board << 7 : player_pawn_board >> 7) & opponent_board & ~player_left_file & ~promotion_rank;
 	for (location = 0; moves_board; moves_board >>= 1, location++) {
 		if (moves_board & 1) {
-			moves[num_moves++] = (struct move) {63 - location + direction * 7, 63 - location, 0};
+			moves[(*num_moves)++] = (struct move) {63 - location + direction * 7, 63 - location, 0};
 		}
 	}
 	if (pos->en_passant != -1) {
 		if (player_pawn_board & (BIT << (63 - pos->en_passant - direction * 7)) & ~player_right_file) {
-			moves[num_moves++] = (struct move) {pos->en_passant + direction * 7, pos->en_passant, 0};
+			moves[(*num_moves)++] = (struct move) {pos->en_passant + direction * 7, pos->en_passant, 0};
 		}
 		if (player_pawn_board & (BIT << (63 - pos->en_passant - direction * 9)) & ~player_left_file) {
-			moves[num_moves++] = (struct move) {pos->en_passant + direction * 9, pos->en_passant, 0};
+			moves[(*num_moves)++] = (struct move) {pos->en_passant + direction * 9, pos->en_passant, 0};
 		}
 	}
 	// pawn promotion
 	moves_board = (player == WHITE ? player_pawn_board << 8 : player_pawn_board >> 8) & ~(player_board | opponent_board) & promotion_rank;
 	for (location = 0; moves_board; moves_board >>= 1, location++) {
 		if (moves_board & 1) {
-			moves[num_moves++] = (struct move) {63 - location + direction * 8, 63 - location, KNIGHT};
-			moves[num_moves++] = (struct move) {63 - location + direction * 8, 63 - location, BISHOP};
-			moves[num_moves++] = (struct move) {63 - location + direction * 8, 63 - location, ROOK};
-			moves[num_moves++] = (struct move) {63 - location + direction * 8, 63 - location, QUEEN};
+			moves[(*num_moves)++] = (struct move) {63 - location + direction * 8, 63 - location, KNIGHT};
+			moves[(*num_moves)++] = (struct move) {63 - location + direction * 8, 63 - location, BISHOP};
+			moves[(*num_moves)++] = (struct move) {63 - location + direction * 8, 63 - location, ROOK};
+			moves[(*num_moves)++] = (struct move) {63 - location + direction * 8, 63 - location, QUEEN};
 		}
 	}
 	moves_board = (player == WHITE ? player_pawn_board << 9 : player_pawn_board >> 9) & opponent_board & ~player_right_file & promotion_rank;
 	for (location = 0; moves_board; moves_board >>= 1, location++) {
 		if (moves_board & 1) {
-			moves[num_moves++] = (struct move) {63 - location + direction * 9, 63 - location, KNIGHT};
-			moves[num_moves++] = (struct move) {63 - location + direction * 9, 63 - location, BISHOP};
-			moves[num_moves++] = (struct move) {63 - location + direction * 9, 63 - location, ROOK};
-			moves[num_moves++] = (struct move) {63 - location + direction * 9, 63 - location, QUEEN};
+			moves[(*num_moves)++] = (struct move) {63 - location + direction * 9, 63 - location, KNIGHT};
+			moves[(*num_moves)++] = (struct move) {63 - location + direction * 9, 63 - location, BISHOP};
+			moves[(*num_moves)++] = (struct move) {63 - location + direction * 9, 63 - location, ROOK};
+			moves[(*num_moves)++] = (struct move) {63 - location + direction * 9, 63 - location, QUEEN};
 		}
 	}
 	moves_board = (player == WHITE ? player_pawn_board << 7 : player_pawn_board >> 7) & opponent_board & ~player_left_file & promotion_rank;
 	for (location = 0; moves_board; moves_board >>= 1, location++) {
 		if (moves_board & 1) {
-			moves[num_moves++] = (struct move) {63 - location + direction * 7, 63 - location, KNIGHT};
-			moves[num_moves++] = (struct move) {63 - location + direction * 7, 63 - location, BISHOP};
-			moves[num_moves++] = (struct move) {63 - location + direction * 7, 63 - location, ROOK};
-			moves[num_moves++] = (struct move) {63 - location + direction * 7, 63 - location, QUEEN};
+			moves[(*num_moves)++] = (struct move) {63 - location + direction * 7, 63 - location, KNIGHT};
+			moves[(*num_moves)++] = (struct move) {63 - location + direction * 7, 63 - location, BISHOP};
+			moves[(*num_moves)++] = (struct move) {63 - location + direction * 7, 63 - location, ROOK};
+			moves[(*num_moves)++] = (struct move) {63 - location + direction * 7, 63 - location, QUEEN};
 		}
 	}
 	// knight
@@ -877,7 +881,7 @@ void get_moves(struct position *pos) {
 						  ~(player_board);
 			for (location = 0; moves_board; moves_board >>= 1, location++) {
 				if (moves_board & 1) {
-					moves[num_moves++] = (struct move) {63 - i, 63 - location, 0};
+					moves[(*num_moves)++] = (struct move) {63 - i, 63 - location, 0};
 				}
 			}
 		}
@@ -892,7 +896,7 @@ void get_moves(struct position *pos) {
 				if (bishop_location & player_board) {
 					break;
 				} else {
-					moves[num_moves++] = (struct move) {63 - i, 63 - i - (9 * j), 0};
+					moves[(*num_moves)++] = (struct move) {63 - i, 63 - i - (9 * j), 0};
 					if (bishop_location & opponent_board) {
 						break;
 					}
@@ -904,7 +908,7 @@ void get_moves(struct position *pos) {
 				if (bishop_location & player_board) {
 					break;
 				} else {
-					moves[num_moves++] = (struct move) {63 - i, 63 - i - (7 * j), 0};
+					moves[(*num_moves)++] = (struct move) {63 - i, 63 - i - (7 * j), 0};
 					if (bishop_location & opponent_board) {
 						break;
 					}
@@ -916,7 +920,7 @@ void get_moves(struct position *pos) {
 				if (bishop_location & player_board) {
 					break;
 				} else {
-					moves[num_moves++] = (struct move) {63 - i, 63 - i + (7 * j), 0};
+					moves[(*num_moves)++] = (struct move) {63 - i, 63 - i + (7 * j), 0};
 					if (bishop_location & opponent_board) {
 						break;
 					}
@@ -928,7 +932,7 @@ void get_moves(struct position *pos) {
 				if (bishop_location & player_board) {
 					break;
 				} else {
-					moves[num_moves++] = (struct move) {63 - i, 63 - i + (9 * j), 0};
+					moves[(*num_moves)++] = (struct move) {63 - i, 63 - i + (9 * j), 0};
 					if (bishop_location & opponent_board) {
 						break;
 					}
@@ -946,7 +950,7 @@ void get_moves(struct position *pos) {
 				if (rook_location & player_board) {
 					break;
 				} else {
-					moves[num_moves++] = (struct move) {63 - i, 63 - i - j, 0};
+					moves[(*num_moves)++] = (struct move) {63 - i, 63 - i - j, 0};
 					if (rook_location & opponent_board) {
 						break;
 					}
@@ -958,7 +962,7 @@ void get_moves(struct position *pos) {
 				if (rook_location & player_board) {
 					break;
 				} else {
-					moves[num_moves++] = (struct move) {63 - i, 63 - i + j, 0};
+					moves[(*num_moves)++] = (struct move) {63 - i, 63 - i + j, 0};
 					if (rook_location & opponent_board) {
 						break;
 					}
@@ -970,7 +974,7 @@ void get_moves(struct position *pos) {
 				if (rook_location & player_board) {
 					break;
 				} else {
-					moves[num_moves++] = (struct move) {63 - i, 63 - i - (8 * j), 0};
+					moves[(*num_moves)++] = (struct move) {63 - i, 63 - i - (8 * j), 0};
 					if (rook_location & opponent_board) {
 						break;
 					}
@@ -982,7 +986,7 @@ void get_moves(struct position *pos) {
 				if (rook_location & player_board) {
 					break;
 				} else {
-					moves[num_moves++] = (struct move) {63 - i, 63 - i + (8 * j), 0};
+					moves[(*num_moves)++] = (struct move) {63 - i, 63 - i + (8 * j), 0};
 					if (rook_location & opponent_board) {
 						break;
 					}
@@ -1000,7 +1004,7 @@ void get_moves(struct position *pos) {
 				if (queen_location & player_board) {
 					break;
 				} else {
-					moves[num_moves++] = (struct move) {63 - i, 63 - i - (9 * j), 0};
+					moves[(*num_moves)++] = (struct move) {63 - i, 63 - i - (9 * j), 0};
 					if (queen_location & opponent_board) {
 						break;
 					}
@@ -1012,7 +1016,7 @@ void get_moves(struct position *pos) {
 				if (queen_location & player_board) {
 					break;
 				} else {
-					moves[num_moves++] = (struct move) {63 - i, 63 - i - (7 * j), 0};
+					moves[(*num_moves)++] = (struct move) {63 - i, 63 - i - (7 * j), 0};
 					if (queen_location & opponent_board) {
 						break;
 					}
@@ -1024,7 +1028,7 @@ void get_moves(struct position *pos) {
 				if (queen_location & player_board) {
 					break;
 				} else {
-					moves[num_moves++] = (struct move) {63 - i, 63 - i + (7 * j), 0};
+					moves[(*num_moves)++] = (struct move) {63 - i, 63 - i + (7 * j), 0};
 					if (queen_location & opponent_board) {
 						break;
 					}
@@ -1036,7 +1040,7 @@ void get_moves(struct position *pos) {
 				if (queen_location & player_board) {
 					break;
 				} else {
-					moves[num_moves++] = (struct move) {63 - i, 63 - i + (9 * j), 0};
+					moves[(*num_moves)++] = (struct move) {63 - i, 63 - i + (9 * j), 0};
 					if (queen_location & opponent_board) {
 						break;
 					}
@@ -1048,7 +1052,7 @@ void get_moves(struct position *pos) {
 				if (queen_location & player_board) {
 					break;
 				} else {
-					moves[num_moves++] = (struct move) {63 - i, 63 - i - j, 0};
+					moves[(*num_moves)++] = (struct move) {63 - i, 63 - i - j, 0};
 					if (queen_location & opponent_board) {
 						break;
 					}
@@ -1060,7 +1064,7 @@ void get_moves(struct position *pos) {
 				if (queen_location & player_board) {
 					break;
 				} else {
-					moves[num_moves++] = (struct move) {63 - i, 63 - i + j, 0};
+					moves[(*num_moves)++] = (struct move) {63 - i, 63 - i + j, 0};
 					if (queen_location & opponent_board) {
 						break;
 					}
@@ -1072,7 +1076,7 @@ void get_moves(struct position *pos) {
 				if (queen_location & player_board) {
 					break;
 				} else {
-					moves[num_moves++] = (struct move) {63 - i, 63 - i - (8 * j), 0};
+					moves[(*num_moves)++] = (struct move) {63 - i, 63 - i - (8 * j), 0};
 					if (queen_location & opponent_board) {
 						break;
 					}
@@ -1084,7 +1088,7 @@ void get_moves(struct position *pos) {
 				if (queen_location & player_board) {
 					break;
 				} else {
-					moves[num_moves++] = (struct move) {63 - i, 63 - i + (8 * j), 0};
+					moves[(*num_moves)++] = (struct move) {63 - i, 63 - i + (8 * j), 0};
 					if (queen_location & opponent_board) {
 						break;
 					}
@@ -1099,47 +1103,62 @@ void get_moves(struct position *pos) {
 		king_location++;
 	}
 	if ((player_king_board << 9) & ~FILE_H & ~(player_board) && !is_attacked(player_king_board << 9, board, player)) {
-		moves[num_moves++] = (struct move) {63 - king_location, 63 - king_location - 9, 0};
+		moves[(*num_moves)++] = (struct move) {63 - king_location, 63 - king_location - 9, 0};
 	}
 	if ((player_king_board << 8) & ~(player_board) && !is_attacked(player_king_board << 8, board, player)) {
-		moves[num_moves++] = (struct move) {63 - king_location, 63 - king_location - 8, 0};
+		moves[(*num_moves)++] = (struct move) {63 - king_location, 63 - king_location - 8, 0};
 	}
 	if ((player_king_board << 7) & ~FILE_A & ~(player_board) && !is_attacked(player_king_board << 7, board, player)) {
-		moves[num_moves++] = (struct move) {63 - king_location, 63 - king_location - 7, 0};
+		moves[(*num_moves)++] = (struct move) {63 - king_location, 63 - king_location - 7, 0};
 	}
 	if ((player_king_board << 1) & ~FILE_H & ~(player_board) && !is_attacked(player_king_board << 1, board, player)) {
-		moves[num_moves++] = (struct move) {63 - king_location, 63 - king_location - 1, 0};
+		moves[(*num_moves)++] = (struct move) {63 - king_location, 63 - king_location - 1, 0};
 	}
 	if ((player_king_board >> 1) & ~FILE_A & ~(player_board) && !is_attacked(player_king_board >> 1, board, player)) {
-		moves[num_moves++] = (struct move) {63 - king_location, 63 - king_location + 1, 0};
+		moves[(*num_moves)++] = (struct move) {63 - king_location, 63 - king_location + 1, 0};
 	}
 	if ((player_king_board >> 7) & ~FILE_H & ~(player_board) && !is_attacked(player_king_board >> 7, board, player)) {
-		moves[num_moves++] = (struct move) {63 - king_location, 63 - king_location + 7, 0};
+		moves[(*num_moves)++] = (struct move) {63 - king_location, 63 - king_location + 7, 0};
 	}
 	if ((player_king_board >> 8) & ~(player_board) && !is_attacked(player_king_board >> 8, board, player)) {
-		moves[num_moves++] = (struct move) {63 - king_location, 63 - king_location + 8, 0};
+		moves[(*num_moves)++] = (struct move) {63 - king_location, 63 - king_location + 8, 0};
 	}
 	if ((player_king_board >> 9) & ~FILE_A & ~(player_board) && !is_attacked(player_king_board >> 9, board, player)) {
-		moves[num_moves++] = (struct move) {63 - king_location, 63 - king_location + 9, 0};
+		moves[(*num_moves)++] = (struct move) {63 - king_location, 63 - king_location + 9, 0};
 	}
 	// castle
 	if (pos->castle_permissions & (pos->turn == WHITE ? 8 : 2) && !((player_board | opponent_board) & F_playerside) && !((player_board | opponent_board) & G_playerside) && !is_attacked(E_playerside, board, player) && !is_attacked(F_playerside, board, player) && !is_attacked(G_playerside, board, player)) {
-		moves[num_moves++] = (struct move) {king_start_location, king_start_location + 2, 0};
+		moves[(*num_moves)++] = (struct move) {king_start_location, king_start_location + 2, 0};
 	}
 	if (pos->castle_permissions & (pos->turn == WHITE ? 4 : 1) && !((player_board | opponent_board) & B_playerside) && !((player_board | opponent_board) & C_playerside) && !((player_board | opponent_board) & D_playerside) && !is_attacked(B_playerside, board, player) && !is_attacked(C_playerside, board, player) && !is_attacked(D_playerside, board, player) && !is_attacked(E_playerside, board, player)) {
-		moves[num_moves++] = (struct move) {king_start_location, king_start_location - 2, 0};
+		moves[(*num_moves)++] = (struct move) {king_start_location, king_start_location - 2, 0};
 	}
-	int j = num_moves;
-	num_moves = 0;
+	int j = *num_moves;
+	*num_moves = 0;
 	for (int i = 0; i < j; i++) {
 		make_move(pos, &moves[i]);
 		if (!is_attacked(player == WHITE ? pos->board.K : pos->board.k, board, player)) {
-			moves[num_moves++] = moves[i];
+			moves[(*num_moves)++] = moves[i];
 		}
 		take_back_move(pos);
 	}
-	printf("%d\n", num_moves);
-	for (int i = 0; i < num_moves; i++) {
+	printf("%d\n", *num_moves);
+	for (int i = 0; i < *num_moves; i++) {
 		printf("%d %d\n", moves[i].from, moves[i].to);
+	}
+}
+
+void perft(int depth, struct position *pos, int *move_count) {
+	if (depth == 0) {
+		(*move_count)++;
+		return;
+	}
+	struct move moves[MAX_POSSIBLE_MOVES];
+	int num_moves;
+	get_moves(pos, moves, &num_moves);
+	for (int i = 0; i < num_moves; i++) {
+		make_move(pos, &moves[i]);
+		perft(depth - 1, pos, move_count);
+		take_back_move(pos);
 	}
 }
