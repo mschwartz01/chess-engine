@@ -95,20 +95,13 @@ int main() {
 	// 40 41 42 43 44 45 46 47
 	// 48 49 50 51 52 53 54 55
 	// 56 57 58 59 60 61 62 63
-	// num_made_moves = 0;
 	struct position p = parse_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-	// struct move moves[MAX_POSSIBLE_MOVES];
-	// int num_moves;
-	// get_moves(&p, moves, &num_moves);
-	// for (int i = 0; i < num_moves; i++) {
-	// 	make_move(&p, &moves[i]);
-	// 	print_board(&p);
-	// 	take_back_move(&p);
-	// 	print_board(&p);
-	// }
-	int perft_move_count = 0;
-	perft(2, &p, &perft_move_count);
-	printf("%d\n", perft_move_count);
+	int perft_move_count;
+	for (int i = 1; i < 5; i++) {
+		perft_move_count = 0;
+		perft(i, &p, &perft_move_count);
+		printf("%d\n", perft_move_count);
+	}
 	return 0;
 }
 
@@ -1130,7 +1123,7 @@ void get_moves(struct position *pos, struct move moves[], int *num_moves) {
 	if (pos->castle_permissions & (pos->turn == WHITE ? 8 : 2) && !((player_board | opponent_board) & F_playerside) && !((player_board | opponent_board) & G_playerside) && !is_attacked(E_playerside, board, player) && !is_attacked(F_playerside, board, player) && !is_attacked(G_playerside, board, player)) {
 		moves[(*num_moves)++] = (struct move) {king_start_location, king_start_location + 2, 0};
 	}
-	if (pos->castle_permissions & (pos->turn == WHITE ? 4 : 1) && !((player_board | opponent_board) & B_playerside) && !((player_board | opponent_board) & C_playerside) && !((player_board | opponent_board) & D_playerside) && !is_attacked(B_playerside, board, player) && !is_attacked(C_playerside, board, player) && !is_attacked(D_playerside, board, player) && !is_attacked(E_playerside, board, player)) {
+	if (pos->castle_permissions & (pos->turn == WHITE ? 4 : 1) && !((player_board | opponent_board) & B_playerside) && !((player_board | opponent_board) & C_playerside) && !((player_board | opponent_board) & D_playerside) && !is_attacked(C_playerside, board, player) && !is_attacked(D_playerside, board, player) && !is_attacked(E_playerside, board, player)) {
 		moves[(*num_moves)++] = (struct move) {king_start_location, king_start_location - 2, 0};
 	}
 	int j = *num_moves;
