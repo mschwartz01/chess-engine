@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 
 const unsigned long long RANK_1 = 0x00000000000000FF;
 const unsigned long long RANK_2 = 0x000000000000FF00;
@@ -76,6 +77,43 @@ void take_back_move(struct position *pos);
 
 void perft(int depth, struct position *pos, int *move_count);
 
+void run_perft_tests(char *file) {
+	char *p = file;
+	char fen[100];
+	int i;
+	for (i = 0; *p != ';'; i++, p++) {
+		fen[i] = *p;
+	}
+	fen[i-1] = '\0';
+	struct position pos = parse_fen(fen);
+	p+=2;
+	int correct_values[10];
+	char num[20];
+	int depth = 1;
+	while (*p != '\n') {
+		for (; *p != ' '; p++) {
+			;
+		}
+		p++;
+		for (i = 0; *p != ';' && *p != '\n'; i++, p++) {
+			num[i] = *p;
+		}
+		num[i-1] = '\0';
+		correct_values[depth-1] = atoi(num);
+		depth++;
+	}
+	int result;
+	for (int j = 0; j < depth - 1; j++) {
+		result = 0;
+		perft(j + 1, &pos, &result);
+		if (result != correct_values[j]) {
+			printf("ErrorErrorErrorErrorErrorErrorErrorError\nErrorErrorErrorErrorErrorErrorErrorError\nErrorErrorErrorErrorErrorErrorErrorError\n");
+		} else {
+			printf("%d == %d\n", result, correct_values[j]);
+		}
+	}
+}
+
 int main() {
 	struct position starting_pos = {
 		{
@@ -87,6 +125,23 @@ int main() {
 		15,
 		-1
 	};
+	FILE *f = fopen("perftsuite.epd", "r");
+	char line[250];
+	int i = 0;
+	char c;
+	int test_num = 1;
+	int j = 1;
+	while (c != EOF) {
+		i = 0;
+		while ((c = fgetc(f)) != '\n') {
+			line[i++] = c;
+		}
+		line[i] = '\n';
+		line[i+1] = '\0';
+		printf("\nFEN %d\n", j++);
+		run_perft_tests(line);
+	}
+	//run_perft_tests("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1 ;D1 20 ;D2 400 ;D3 8902 ;D4 197281 ;D5 4865609 ;D6 119060324\n");
 	// 0  1  2  3  4  5  6  7
 	// 8  9  10 11 12 13 14 15
 	// 16 17 18 19 20 21 22 23
@@ -95,13 +150,28 @@ int main() {
 	// 40 41 42 43 44 45 46 47
 	// 48 49 50 51 52 53 54 55
 	// 56 57 58 59 60 61 62 63
-	struct position p = parse_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
-	int perft_move_count;
-	for (int i = 1; i < 5; i++) {
-		perft_move_count = 0;
-		perft(i, &p, &perft_move_count);
-		printf("%d\n", perft_move_count);
-	}
+	// struct position p = parse_fen("rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1");
+	// struct position p = parse_fen("4k2r/8/8/8/8/8/8/4K3 w k - 0 1");
+	// struct move moves[MAX_POSSIBLE_MOVES];
+	// int n_moves;
+	// int mc;
+	// get_moves(&p, moves, &n_moves);
+	// int total = 0;
+	// for (int j = 0; j < n_moves; j++) {
+	// 	mc = 0;
+	// 	make_move(&p, &moves[j]);
+	// 	perft(1, &p, &mc);
+	// 	take_back_move(&p);
+	// 	printf("from %d, to %d, moves_found %d\n", moves[j].from, moves[j].to, mc);
+	// 	total += mc;
+	// }
+	// printf("total %d\n", total);
+	// int perft_move_count;
+	// for (int i = 1; i < 7; i++) {
+	// 	perft_move_count = 0;
+	// 	perft(i, &p, &perft_move_count);
+	// 	printf("%d\n", perft_move_count);
+	// }
 	return 0;
 }
 
@@ -578,15 +648,20 @@ void make_move(struct position *pos, struct move *move) {
 	pos->turn = opponent;
 	if (move->from == 60) {
 		pos->castle_permissions &= 3;
-	} else if (move->from == 63 || move->to == 63) {
+	}
+	if (move->from == 63 || move->to == 63) {
 		pos->castle_permissions &= 7;
-	} else if (move->from == 56 || move->to == 56) {
+	}
+	if (move->from == 56 || move->to == 56) {
 		pos->castle_permissions &= 11;
-	} else if (move->from == 4) {
+	}
+	if (move->from == 4) {
 		pos->castle_permissions &= 12;
-	} else if (move->from == 7 || move->to == 7) {
+	}
+	if (move->from == 7 || move->to == 7) {
 		pos->castle_permissions &= 13;
-	} else if (move->from == 0 || move->to == 0) {
+	}
+	if (move->from == 0 || move->to == 0) {
 		pos->castle_permissions &= 14;
 	}
 	made_moves[num_made_moves++] = info;
