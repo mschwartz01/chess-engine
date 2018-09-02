@@ -118,9 +118,9 @@ void run_perft_tests_from_file(FILE *file);
 */
 int evaluation(struct position *pos);
 
-struct move_score maximizer(struct position *pos, int depth);
+struct move_score maximizer(struct position *pos, int depth, int alpha, int beta);
 
-struct move_score minimizer(struct position *pos, int depth);
+struct move_score minimizer(struct position *pos, int depth, int alpha, int beta);
 
 struct move_score {
 	struct move move;

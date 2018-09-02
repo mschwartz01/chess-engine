@@ -60,7 +60,7 @@ int evaluation(struct position *pos) {
 	return value;
 }
 
-struct move_score maximizer(struct position *pos, int depth) {
+struct move_score maximizer(struct position *pos, int depth, int alpha, int beta) {
 	if (depth == 0) {
 		return (struct move_score) {{0, 0, 0}, evaluation(pos)};
 	}
@@ -70,16 +70,22 @@ struct move_score maximizer(struct position *pos, int depth) {
 	get_moves(pos, moves, &num_moves);
 	for (int i = 0; i < num_moves; i++) {
 		make_move(pos, &moves[i]);
-		struct move_score value = {moves[i], minimizer(pos, depth - 1).score};
+		struct move_score value = {moves[i], minimizer(pos, depth - 1, alpha, beta).score};
 		if (value.score > best_move.score) {
 			best_move = value;
 		}
 		take_back_move(pos);
+		if (best_move.score >= beta) {
+			return best_move;
+		}
+		if (best_move.score > alpha) {
+			alpha = best_move.score;
+		}
 	}
 	return best_move;
 }
 
-struct move_score minimizer(struct position *pos, int depth) {
+struct move_score minimizer(struct position *pos, int depth, int alpha, int beta) {
 	if (depth == 0) {
 		return (struct move_score) {{0, 0, 0}, evaluation(pos)};
 	}
@@ -89,11 +95,17 @@ struct move_score minimizer(struct position *pos, int depth) {
 	get_moves(pos, moves, &num_moves);
 	for (int i = 0; i < num_moves; i++) {
 		make_move(pos, &moves[i]);
-		struct move_score value = {moves[i], maximizer(pos, depth - 1).score};
+		struct move_score value = {moves[i], maximizer(pos, depth - 1, alpha, beta).score};
 		if (value.score < best_move.score) {
 			best_move = value;
 		}
 		take_back_move(pos);
+		if (best_move.score <= alpha) {
+			return best_move;
+		}
+		if (best_move.score < beta) {
+			beta = best_move.score;
+		}
 	}
 	return best_move;
 }

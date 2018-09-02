@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <limits.h>
 #include "engine.h"
 
 const unsigned long long RANK_1 = 0x00000000000000FF;
@@ -47,7 +48,7 @@ int main() {
 	struct position p = parse_fen("4k1nr/ppp2pPp/n4r2/4q3/b7/BP1p4/P1P5/R5K1 b k -");
 	printf("%d\n", evaluation(&p));
 	print_board(&p);
-	struct move_score move_choice = minimizer(&p, 4);
+	struct move_score move_choice = minimizer(&p, 4, INT_MIN, INT_MAX);
 	printf("%d\n", move_choice.score);
 	printf("from: %d, to: %d\n", move_choice.move.from, move_choice.move.to);
 	return 0;
