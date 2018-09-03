@@ -76,16 +76,6 @@ struct move_info made_moves[MAX_MADE_MOVES];
 
 int num_made_moves;
 
-void print_board(struct position *);
-
-void get_moves(struct position *pos, struct move moves[], int *num_moves);
-
-struct position parse_fen(char *fen);
-
-void make_move(struct position *pos, struct move *move);
-
-void take_back_move(struct position *pos);
-
 void print_board(struct position *pos);
 
 struct position parse_fen(char *fen);
@@ -98,7 +88,7 @@ void take_back_move(struct position *pos);
 
 void get_moves(struct position *pos, struct move moves[], int *num_moves);
 
-void perft(int depth, struct position *pos, int *move_count);
+void get_capture_moves(struct position *pos, struct move moves[], int *num_moves);
 
 /*
 *************
@@ -116,15 +106,19 @@ void run_perft_tests_from_file(FILE *file);
 ** search.c **
 **************
 */
+struct move_score {
+	struct move move;
+	int score;
+};
+
 int evaluation(struct position *pos);
 
 struct move_score maximizer(struct position *pos, int depth, int alpha, int beta);
 
 struct move_score minimizer(struct position *pos, int depth, int alpha, int beta);
 
-struct move_score {
-	struct move move;
-	int score;
-};
+struct move_score maximizer_quiescence(struct position *pos, int alpha, int beta);
+
+struct move_score minimizer_quiescence(struct position *pos, int alpha, int beta);
 
 #endif

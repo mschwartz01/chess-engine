@@ -62,7 +62,7 @@ int evaluation(struct position *pos) {
 
 struct move_score maximizer(struct position *pos, int depth, int alpha, int beta) {
 	if (depth == 0) {
-		return (struct move_score) {{0, 0, 0}, evaluation(pos)};
+		return maximizer_quiescence(pos, alpha, beta);
 	}
 	struct move moves[MAX_POSSIBLE_MOVES];
 	int num_moves;
@@ -87,7 +87,7 @@ struct move_score maximizer(struct position *pos, int depth, int alpha, int beta
 
 struct move_score minimizer(struct position *pos, int depth, int alpha, int beta) {
 	if (depth == 0) {
-		return (struct move_score) {{0, 0, 0}, evaluation(pos)};
+		return minimizer_quiescence(pos, alpha, beta);
 	}
 	struct move moves[MAX_POSSIBLE_MOVES];
 	int num_moves;
@@ -108,4 +108,56 @@ struct move_score minimizer(struct position *pos, int depth, int alpha, int beta
 		}
 	}
 	return best_move;
+}
+
+struct move_score maximizer_quiescence(struct position *pos, int alpha, int beta) {
+	struct move moves[MAX_POSSIBLE_MOVES];
+	int num_moves;
+	struct move_score best_move = {{0, 0, 0}, INT_MIN};
+	get_capture_moves(pos, moves, &num_moves);
+	int current_score = evaluation(pos);
+	if (num_moves == 0) {
+		return (struct move_score) {{0, 0, 0}, current_score};
+	}
+	for (int i = 0; i < num_moves; i++) {
+		make_move(pos, &moves[i]);
+		struct move_score value = {moves[i], minimizer_quiescence(pos, alpha, beta).score};
+		if (value.score > best_move.score) {
+			best_move = value;
+		}
+		take_back_move(pos);
+		if (best_move.score >= beta) {
+			return best_move;
+		}
+		if (best_move.score > alpha) {
+			alpha = best_move.score;
+		}
+	}
+	return current_score >= best_move.score ? (struct move_score) {{0, 0, 0}, current_score} : best_move;
+}
+
+struct move_score minimizer_quiescence(struct position *pos, int alpha, int beta) {
+	struct move moves[MAX_POSSIBLE_MOVES];
+	int num_moves;
+	struct move_score best_move = {{0, 0, 0}, INT_MAX};
+	get_capture_moves(pos, moves, &num_moves);
+	int current_score = evaluation(pos);
+	if (num_moves == 0) {
+		return (struct move_score) {{0, 0, 0}, current_score};
+	}
+	for (int i = 0; i < num_moves; i++) {
+		make_move(pos, &moves[i]);
+		struct move_score value = {moves[i], maximizer_quiescence(pos, alpha, beta).score};
+		if (value.score < best_move.score) {
+			best_move = value;
+		}
+		take_back_move(pos);
+		if (best_move.score <= alpha) {
+			return best_move;
+		}
+		if (best_move.score < beta) {
+			beta = best_move.score;
+		}
+	}
+	return current_score <= best_move.score ? (struct move_score) {{0, 0, 0}, current_score} : best_move;
 }
